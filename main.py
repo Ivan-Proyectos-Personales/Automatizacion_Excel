@@ -8,6 +8,15 @@ from funciones_excel import (
 )
 
 def main():
+    carpeta_proyecto = Path(__file__).resolve().parent
+    while True:
+        nombre_excel = input("Nombre del Excel (con extensión): ").strip()
+        ruta_entrada = carpeta_proyecto / "entrada" / nombre_excel
+        if ruta_entrada.is_file():
+             break
+        
+        print(f"No se encuentra el archivo: {ruta_entrada}")
+    
     while True:
             try:
                 texto = input("¿Qué rango quieres procesar:?")
@@ -16,14 +25,7 @@ def main():
             except ValueError as error:
                  print(error)
 
-    #Construimos las rutas desde la ubicación de este archivo
-    carpeta_proyecto = Path(__file__).resolve().parent
-
-    ruta_entrada = (carpeta_proyecto / "entrada" / "_Control de obra_7185.xls")
-    ruta_salida = (carpeta_proyecto / "salida" / "_Control de obra_7185.xls_MODIFICADO.xls")
-
-    if not ruta_entrada.is_file():
-          raise FileNotFoundError(f"No se encuentra el archivo: {ruta_entrada}")
+    ruta_salida = (carpeta_proyecto / "salida" / nombre_excel)
 
     ruta_salida.parent.mkdir(parents=True, exist_ok=True)
 

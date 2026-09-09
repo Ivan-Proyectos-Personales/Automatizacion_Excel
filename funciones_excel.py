@@ -41,15 +41,18 @@ def obtener_comparativos(hoja, inicio, fin):
             # Ignoramos celdas que no sean letras de comparativos.
             continue
         if inicio <= numero <= fin:
+            partidas = hoja.range(f"E{fila}").value
+
             comparativos.append({
                 "letra": valor,
                 "trabajo": hoja.range(f"D{fila}").value,
+                "partidas": partidas
             })
     return comparativos
 
 
 def crear_pestaña_comparativo(wb, comparativo):
-    nombre_hoja = f"{comparativo['letra']}_{comparativo['trabajo']}"[:31]
+    nombre_hoja = f"{comparativo['letra']}_{comparativo['trabajo']}"[:20]
 
     letras_existentes = {hoja.name.split("_", 1)[0]
                          for hoja in wb.sheets
@@ -63,7 +66,85 @@ def crear_pestaña_comparativo(wb, comparativo):
 
 def llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin):
     hoja_compras = wb.sheets["COMPRAS"]
+    hoja_presupuesto = wb.sheets["PPTO INIC (E)"]
+
     comparativos = obtener_comparativos(hoja_compras, inicio, fin)
+
     for comparativo in comparativos:
         crear_pestaña_comparativo(wb, comparativo)
+
+        intervalos = obtener_intervalos_partidas(comparativo["partidas"])
+        partidas = buscar_partidas(hoja_presupuesto, intervalos)
+
+        escribir_partidas(wb, comparativo["letra"], partidas)
+
     wb.save(str(ruta_salida))
+
+def obtener_intervalos_partidas(texto):
+    if texto is None or str(texto).strip() == "":
+        return []
+
+    intervalos = []
+
+    for bloque in str(texto).split(","):
+        partes = bloque.strip().split("-")
+
+        if len(partes) == 1:
+            inicio = partes[0].strip()
+            fin = inicio
+        elif len(partes) == 2:
+            inicio = partes[0].strip()
+            fin = partes[1].strip()
+        else:
+            raise ValueError(f"Formato de partidas incorrecto: {bloque}")
+
+        if not inicio or not fin:
+            raise ValueError(f"Falta una partida en: {texto}")
+
+        intervalos.append((inicio, fin))
+
+    return intervalos
+
+def buscar_partidas(hoja_presupuesto, intervalos):
+    ultima_fila = hoja_presupuesto.used_range.last_cell.row
+    filas = hoja_presupuesto.range(f"A5:D{ultima_fila}").value
+
+    posiciones = {}
+
+    for posicion, fila in enumerate(filas):
+        codigo = fila[0]
+
+        if codigo is not None:
+            codigo = str(codigo).strip()
+            posiciones[codigo] = posicion
+
+    partidas = []
+
+    for inicio, fin in intervalos:
+        if inicio not in posiciones:
+            raise ValueError(f"No se encuentra la partida: {inicio}")
+
+        if fin not in posiciones:
+            raise ValueError(f"No se encuentra la partida: {fin}")
+
+        primera = posiciones[inicio]
+        ultima = posiciones[fin]
+
+        if primera > ultima:
+            raise ValueError(f"El intervalo está invertido: {inicio}-{fin}")
+
+        for posicion in range(primera, ultima + 1):
+            partidas.append(filas[posicion])
+
+    return partidas
+
+def escribir_partidas(wb, letra, partidas):
+    if not partidas:
+        return
+
+    for hoja in wb.sheets:
+        if hoja.name.startswith(f"{letra}_"):
+            hoja.range("A9").value = partidas
+            return
+
+    raise ValueError(f"No se encuentra la pestaña del comparativo{letra}")

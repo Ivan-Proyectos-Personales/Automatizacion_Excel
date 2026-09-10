@@ -4,11 +4,14 @@ import xlwings as xw
 from funciones_excel import (
       cargar_excel,
       llamadas_a_todo_lo_de_comparativos,
-      letra_valida
+      letra_valida,
+      obtener_carpeta_aplicacion
 )
 
 def main():
-    carpeta_proyecto = Path(__file__).resolve().parent
+    carpeta_proyecto = obtener_carpeta_aplicacion()
+    (carpeta_proyecto / "entrada").mkdir(exist_ok=True)
+    (carpeta_proyecto / "salida").mkdir(exist_ok=True)
     while True:
         nombre_excel = input("Nombre del Excel (con extensión): ").strip()
         ruta_entrada = carpeta_proyecto / "entrada" / nombre_excel
@@ -39,4 +42,10 @@ def main():
     print(f"Archivo generado: {ruta_salida}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+    finally:
+        input("\nPulsa Enter para cerrar...")

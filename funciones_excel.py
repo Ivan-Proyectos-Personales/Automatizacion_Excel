@@ -1,4 +1,14 @@
-﻿def cargar_excel(app, ruta_entrada):
+﻿import sys
+from pathlib import Path
+
+def obtener_carpeta_aplicacion():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    return Path(__file__).resolve().parent
+
+
+def cargar_excel(app, ruta_entrada):
     return app.books.open(str(ruta_entrada), update_links=False)
 
 
@@ -69,14 +79,25 @@ def llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin):
     hoja_presupuesto = wb.sheets["PPTO INIC (E)"]
 
     comparativos = obtener_comparativos(hoja_compras, inicio, fin)
+    partidas_por_letra = {}
 
     for comparativo in comparativos:
-        crear_pestaña_comparativo(wb, comparativo)
+        letra = comparativo["letra"]
+
+
+        if letra not in partidas_por_letra:
+            crear_pestaña_comparativo(wb, comparativo)
+            partidas_por_letra[letra] = []
 
         intervalos = obtener_intervalos_partidas(comparativo["partidas"])
         partidas = buscar_partidas(hoja_presupuesto, intervalos)
 
-        escribir_partidas(wb, comparativo["letra"], partidas)
+        partidas_por_letra[letra].extend(partidas)
+
+    for letra, partidas in partidas_por_letra.items():
+        escribir_partidas(wb, letra, partidas)
+
+    rellenar_importes_compras(hoja_compras, hoja_presupuesto)
 
     wb.save(str(ruta_salida))
 
@@ -107,7 +128,7 @@ def obtener_intervalos_partidas(texto):
 
 def buscar_partidas(hoja_presupuesto, intervalos):
     ultima_fila = hoja_presupuesto.used_range.last_cell.row
-    filas = hoja_presupuesto.range(f"A5:D{ultima_fila}").value
+    filas = hoja_presupuesto.range(f"A5:I{ultima_fila}").value
 
     posiciones = {}
 
@@ -144,7 +165,33 @@ def escribir_partidas(wb, letra, partidas):
 
     for hoja in wb.sheets:
         if hoja.name.startswith(f"{letra}_"):
-            hoja.range("A9").value = partidas
+            # A, B, C y D del presupuesto
+            hoja.range("A9").value = [partida[:4] for partida in partidas]
+
+            # H del presupuesto -> L
+            hoja.range("L9").value = [[partida[7]] for partida in partidas]
+
+            # E del presupuesto -> AF
+            hoja.range("AF9").value = [[partida[4]] for partida in partidas]
             return
 
     raise ValueError(f"No se encuentra la pestaña del comparativo{letra}")
+
+def rellenar_importes_compras(hoja_compras, hoja_presupuesto):
+    ultima_fila = hoja_compras.used_range.last_cell.row
+
+    for fila in range(6, ultima_fila + 1):
+        texto = hoja_compras.range(f"E{fila}").value
+        intervalos = obtener_intervalos_partidas(texto)
+
+        if not intervalos:
+            continue
+
+        partidas = buscar_partidas(hoja_presupuesto, intervalos)
+
+        total_objetivo = sum(partida[8] or 0 for partida in partidas)
+
+        total_presupuesto = sum(partida[5] or 0 for partida in partidas)
+
+        hoja_compras.range(f"R{fila}").value = total_objetivo
+        hoja_compras.range(f"T{fila}").value = total_presupuesto

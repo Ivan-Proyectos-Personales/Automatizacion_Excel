@@ -5,7 +5,8 @@ from funciones_excel import (
       cargar_excel,
       llamadas_a_todo_lo_de_comparativos,
       letra_valida,
-      obtener_carpeta_aplicacion
+      obtener_carpeta_aplicacion,
+      total_venta_lote
 )
 
 def main():
@@ -19,14 +20,6 @@ def main():
              break
         
         print(f"No se encuentra el archivo: {ruta_entrada}")
-    
-    while True:
-            try:
-                texto = input("¿Qué rango quieres procesar:?")
-                inicio, fin = letra_valida(texto)
-                break
-            except ValueError as error:
-                 print(error)
 
     ruta_salida = (carpeta_proyecto / "salida" / nombre_excel)
 
@@ -35,10 +28,29 @@ def main():
     # Abrimos una instancia de Excel sin mostrar su ventana.
     with xw.App(visible=False, add_book=False) as app:
         wb = cargar_excel(app, ruta_entrada)
+
         try:
-            llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin)
+            total_venta_lote(wb, ruta_salida)
+
+            while True:
+                try:
+                    texto = input(
+                        "¿Qué rango quieres procesar?: "
+                    ).strip().upper()
+
+                    inicio, fin = letra_valida(texto)
+                    break
+
+                except ValueError as error:
+                    print(error)
+
+            llamadas_a_todo_lo_de_comparativos(
+                wb, ruta_salida, inicio, fin
+            )
+
         finally:
             wb.close()
+
     print(f"Archivo generado: {ruta_salida}")
 
 if __name__ == "__main__":

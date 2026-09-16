@@ -128,6 +128,7 @@ def llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin):
     for letra, partidas in partidas_por_letra.items():
         escribir_partidas(wb, letra, partidas)
 
+    ordenar_pestanas_comparativos(wb)
     wb.save(str(ruta_salida))
 
 import re 
@@ -154,7 +155,7 @@ def obtener_intervalos_partidas(texto):
               if re.fullmatch(r"[a-zA-Z]+", fin):
                   # 2.11a-e → 2.11a-2.11e
                   coincidencia = re.fullmatch(
-                      r"(\d+(?:\.\d+)*)([a-zA-Z]+)",
+                      r"([a-zA-Z]?\d+(?:\.\d+)*)([a-zA-Z]+)",
                       inicio,
                   )
 
@@ -183,7 +184,7 @@ def obtener_intervalos_partidas(texto):
                   f"Formato de partidas incorrecto: {bloque}"
               )
 
-          patron = r"\d+(?:\.\d+)+[a-zA-Z]*"
+          patron = r"[a-zA-Z]?\d+(?:\.\d+)+[a-zA-Z]*"
 
           if not (
               re.fullmatch(patron, inicio)
@@ -272,32 +273,22 @@ def rellenar_importes_compras(hoja_compras, hoja_presupuesto):
         hoja_compras.range(f"S{fila}").value = total_presupuesto
 
 def ordenar_pestanas_comparativos(wb):
-      hojas = list(wb.sheets)
+    hojas = list(wb.sheets)
 
-      # Las primeras cuatro se quedan como están.
-      posiciones = []
-      comparativos = []
+    if len(hojas) <= 4:
+        return
 
-      for posicion in range(4, len(hojas)):
-          coincidencia = re.match(
-              r"^([A-Za-z]{1,2})[_-]",
-              hojas[posicion].name,
-          )
+    # Primero las hojas con guion bajo; en cada grupo, de Z a A
+    # por el primer carácter, sin distinguir mayúsculas.
+    hojas_ordenadas = sorted(
+        hojas[4:],
+        key=lambda hoja: ("_" in hoja.name, hoja.name[0].casefold()),
+        reverse=True
+    )
 
-          if coincidencia:
-              posiciones.append(posicion)
-              letra = coincidencia.group(1)
-              comparativos.append(
-                  (letra_a_numero(letra), hojas[posicion])
-              )
+    # Colocamos las hojas ordenadas después de la cuarta.
+    anterior = hojas[3]
 
-      comparativos.sort(key=lambda elemento: elemento[0], reverse=True)
-
-      # Solo intercambiamos las posiciones de los comparativos.
-      for posicion, (_, hoja) in zip(posiciones, comparativos):
-          hojas[posicion] = hoja
-
-      # Aplicamos el orden a las pestañas de Excel.
-      for posicion in range(4, len(hojas)):
-          hojas[posicion].api.Move(
-              After=hojas[posicion - 1].api)
+    for hoja in hojas_ordenadas:
+        hoja.api.Move(After=anterior.api)
+        anterior = hoja

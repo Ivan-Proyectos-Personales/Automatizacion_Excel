@@ -1,4 +1,3 @@
-from pathlib import Path
 import xlwings as xw
 
 from funciones_excel import (
@@ -13,13 +12,27 @@ def main():
     carpeta_proyecto = obtener_carpeta_aplicacion()
     (carpeta_proyecto / "entrada").mkdir(exist_ok=True)
     (carpeta_proyecto / "salida").mkdir(exist_ok=True)
-    while True:
-        nombre_excel = input("Nombre del Excel (con extensión): ").strip()
-        ruta_entrada = carpeta_proyecto / "entrada" / nombre_excel
-        if ruta_entrada.is_file():
-             break
-        
-        print(f"No se encuentra el archivo: {ruta_entrada}")
+    archivos_excel = sorted(
+        archivo
+        for archivo in (carpeta_proyecto / "entrada").iterdir()
+        if archivo.is_file()
+        and archivo.suffix.lower() in {".xlsx", ".xlsm", ".xls", ".xlsb"}
+        and not archivo.name.startswith("~$")
+    )
+
+    if not archivos_excel:
+        print("No hay ningún Excel en la carpeta entrada. Coloca uno y vuelve a ejecutar el programa.")
+        return
+
+    if len(archivos_excel) > 1:
+        print("Hay varios Excel en la carpeta entrada. Deja solo el que quieras procesar:")
+        for archivo in archivos_excel:
+            print(f"  - {archivo.name}")
+        return
+
+    ruta_entrada = archivos_excel[0]
+    nombre_excel = ruta_entrada.name
+    print(f"Excel seleccionado: {nombre_excel}")
 
     ruta_salida = (carpeta_proyecto / "salida" / nombre_excel)
 

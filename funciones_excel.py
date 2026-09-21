@@ -110,6 +110,16 @@ def llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin):
 
     
     comparativos = obtener_comparativos(hoja_compras, inicio, fin)
+    nombres_por_letra = {}
+    for comparativo in comparativos:
+        nombres = nombres_por_letra.setdefault(comparativo["letra"], [])
+        nombres.append(comparativo["trabajo"])
+        if len(nombres) > 8:
+            raise ValueError(
+                f"El comparativo {comparativo['letra']} tiene más de 8 lotes. "
+                "Solo hay espacio para sus nombres en D2:K2."
+            )
+
     partidas_por_letra = {}
 
     for comparativo in comparativos:
@@ -126,9 +136,13 @@ def llamadas_a_todo_lo_de_comparativos(wb, ruta_salida, inicio, fin):
         partidas_por_letra[letra].extend(partidas)
 
     for letra, partidas in partidas_por_letra.items():
+        escribir_nombres_lotes(wb, letra, nombres_por_letra[letra])
         escribir_partidas(wb, letra, partidas)
 
+    actualizar_comparativos_en_presupuesto(wb, hoja_presupuesto)
     ordenar_pestanas_comparativos(wb)
+    # Excel recuerda la pestaña activa al guardar el libro.
+    hoja_compras.activate()
     wb.save(str(ruta_salida))
 
 import re 
@@ -231,6 +245,34 @@ def buscar_partidas(hoja_presupuesto, intervalos):
 
     return partidas
 
+def escribir_nombres_lotes(wb, letra, nombres):
+    """Actualiza la cabecera por filas de COMPRAS, también en hojas reutilizadas."""
+    destinos = ("D2", "E2", "F2", "G2", "H2", "I2", "J2", "K2")
+    if len(nombres) > len(destinos):
+        raise ValueError(f"El comparativo {letra} tiene más de 8 lotes.")
+
+    for hoja in wb.sheets:
+        if hoja.name.startswith(f"{letra}_"):
+            referencia = hoja.range("D2")
+            # Retira los nombres colocados por la versión anterior.
+            hoja.range("L2:R2").clear_contents()
+            for posicion, destino in enumerate(destinos):
+                celda = hoja.range(destino)
+                if posicion < len(nombres):
+                    if posicion:
+                        referencia.copy()
+                        celda.paste(paste="formats")
+                    celda.api.WrapText = True
+                # Limpia los nombres sobrantes si ahora se incluyen menos lotes.
+                celda.value = (
+                    nombres[posicion] if posicion < len(nombres) else None
+                )
+            hoja.range("D2:K2").rows.autofit()
+            return
+
+    raise ValueError(f"No se encuentra la pestaña del comparativo {letra}")
+
+
 def escribir_partidas(wb, letra, partidas):
     if not partidas:
         return
@@ -248,6 +290,45 @@ def escribir_partidas(wb, letra, partidas):
             return
 
     raise ValueError(f"No se encuentra la pestaña del comparativo{letra}")
+
+def actualizar_comparativos_en_presupuesto(wb, hoja_presupuesto):
+    """Anota en K los prefijos de las hojas que contienen cada código de PPTO."""
+    letras_por_codigo = {}
+    for hoja in wb.sheets:
+        prefijo, separador, _ = hoja.name.partition("_")
+        if not separador or not re.fullmatch(r"[A-Z]{1,2}", prefijo):
+            continue
+
+        ultima_fila = hoja.used_range.last_cell.row
+        if ultima_fila < 9:
+            continue
+
+        codigos = hoja.range(f"A9:A{ultima_fila}").options(ndim=1).value
+        for codigo in codigos:
+            if codigo is None or not str(codigo).strip():
+                continue
+            codigo = str(codigo).strip()
+            letras_por_codigo.setdefault(codigo, set()).add(prefijo)
+
+    ultima_fila = hoja_presupuesto.used_range.last_cell.row
+    if ultima_fila < 5:
+        return
+
+    codigos = hoja_presupuesto.range(f"A5:A{ultima_fila}").options(ndim=1).value
+    for fila, codigo in enumerate(codigos, start=5):
+        if codigo is None or not str(codigo).strip():
+            continue
+        letras = letras_por_codigo.get(str(codigo).strip(), set())
+        celda = hoja_presupuesto.range(f"K{fila}")
+        if letras:
+            # Copiamos solo el formato del ejemplo, conservando las letras calculadas.
+            hoja_presupuesto.range("J117").copy()
+            celda.paste(paste="formats")
+        # Recalculamos para quitar referencias a comparativos ya eliminados.
+        celda.value = (
+            ", ".join(sorted(letras, key=letra_a_numero)) or None
+        )
+
 
 def rellenar_importes_compras(hoja_compras, hoja_presupuesto):
     ultima_fila = hoja_compras.used_range.last_cell.row

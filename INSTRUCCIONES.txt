@@ -1,0 +1,249 @@
+INSTRUCCIONES DE USO - AUTOMATIZAR EXCEL INGECO
+=============================================
+
+1. REQUISITOS Y CARPETAS
+-----------------------
+El programa necesita Windows y Microsoft Excel instalado. Para utilizar el
+ejecutable no es necesario instalar Python.
+
+La distribución de archivos debe ser la siguiente:
+
+    AutomatizarExcel1.exe
+    INSTRUCCIONES.txt
+    entrada/
+        .xls
+    salida/
+
+La carpeta puede trasladarse a otra ubicación. El programa busca entrada y salida
+junto al ejecutable y las crea si no existen. La ubicación debe disponer de permisos para crear carpetas y guardar archivos.
+
+Debe haber UN SOLO Excel directamente dentro de entrada: no se
+busca en subcarpetas
+
+2. PASOS PARA EJECUTARLO
+-----------------------
+1) Guardar los cambios del Excel y cerrar el archivo antes de procesarlo.
+   Cerrar también el archivo de salida si se encuentra abierto.
+2) Colocar el Excel que se va a procesar en entrada.
+3) Ejecutar AutomatizarExcel1.exe. Se mostrará el nombre seleccionado.
+4) Ante la pregunta de rellenar los importes de cada lote, introducir:
+       S: calcula y escribe los importes en COMPRAS.
+       N: deja esos importes como están y continúa con los comparativos.
+   Confirmar con Enter.
+5) Introducir el rango de identificadores de comparativos y pulsar Enter.
+   Ejemplos: A-G, A-AA, AA-AG. Para un único comparativo, utilizar A-A.
+6) Esperar al mensaje "Archivo generado" y comprobar la ruta indicada.
+7) Pulsar Enter para cerrar la ventana. El resultado estará en salida.
+
+Se guarda el resultado con el mismo nombre y extensión que el archivo de
+entrada. El programa está preparado para guardar en salida, no sobre el
+original de entrada. Para conservar un resultado anterior con ese mismo
+nombre, debe trasladarse o renombrarse antes de una nueva ejecución: el programa no genera
+nombres de versión ni copias con fecha.
+
+Si aparece un error, no debe considerarse válido un archivo anterior presente
+en salida. Debe comprobarse que la ejecución actual haya terminado con "Archivo generado".
+
+3. HOJAS QUE DEBE TENER EL EXCEL
+------------------------------
+- COMPRAS: debe conservarse este nombre exacto.
+- PPTO: el nombre del presupuesto debe empezar por PPTO; por ejemplo,
+  PPTO o PPTO OBRA. Se aceptan mayúsculas y minúsculas en este prefijo.
+  Si hay varias hojas que cumplen esta condición, se utiliza la primera
+  según el orden de las pestañas. Se recomienda disponer de una única hoja de presupuesto.
+- Plantilla Comparativos: debe conservarse este nombre exacto. Se necesita para crear
+  los comparativos que todavía no existen.
+
+Debe conservarse la estructura de columnas y las zonas de escritura de la plantilla.
+El libro debe permitir crear y mover hojas, y escribir en las celdas de destino.
+
+4. CONTENIDO DE LA HOJA COMPRAS
+-----------------------------
+Columna D: nombre del trabajo.
+Columna E: códigos de partidas o intervalos.
+Columna I: identificador del comparativo, de A a ZZ.
+Columna S: destino del total del presupuesto si se selecciona S.
+Columna U: destino del total objetivo si se selecciona S.
+
+El cálculo de importes recorre desde la fila 6 hasta la última fila utilizada.
+Se aplica a todas esas filas con partidas, no solo al rango de comparativos
+que se seleccione posteriormente. Sustituye el contenido de S y U en las filas calculadas.
+
+Si varias filas tienen el mismo identificador, sus partidas se agrupan en
+el mismo comparativo siguiendo el orden de las filas de COMPRAS.
+
+5. FORMATOS PERMITIDOS EN LAS PARTIDAS (COLUMNA E)
+------------------------------------------------
+Ejemplos admitidos:
+
+    1.01                  Una partida.
+    A1.01                 Una partida con letra inicial.
+    B3.02                 Otra partida con letra inicial.
+    7.01.02               Código con varios niveles numéricos.
+    2.11a                 Código con letra final.
+    A1.01a                Letra inicial y letra final.
+    1.01, A1.03, B3.02     Varias partidas separadas por comas.
+    1.01-1.05             Intervalo con ambos códigos completos.
+    1.01-05               Equivale a 1.01-1.05.
+    A1.01-A1.05           Intervalo con letra inicial.
+    A1.01-05              Equivale a A1.01-A1.05.
+    7.01.02-04            Equivale a 7.01.02-7.01.04.
+    2.11a-e               Equivale a 2.11a-2.11e.
+    2.11a-11e             Equivale a 2.11a-2.11e.
+    A1.01a-c              Equivale a A1.01a-A1.01c.
+    1.01-05, B3.02        Combina intervalos y partidas individuales.
+
+Reglas de escritura:
+- El código debe contener al menos un punto entre bloques numéricos.
+- Se admite una letra inicial opcional de A a Z, mayúscula o minúscula.
+- Al final se admiten cero, una o varias letras de A a Z.
+- No se admiten Ñ, letras acentuadas ni letras dentro de los bloques numéricos.
+- Debe utilizarse el punto dentro del código, la coma para separar elementos y el guion
+  normal (-) para intervalos. No se admiten punto y coma ni guiones largos.
+- Se permiten espacios alrededor de las comas y del guion, pero no dentro
+  de un código. No se admiten comas al principio o al final ni elementos vacíos.
+- Para abreviar el final de un intervalo, se conserva todo lo que va antes
+  del último punto del código inicial. Si cambia el prefijo, deben escribirse ambos
+  códigos completos.
+- Los códigos deben coincidir exactamente con los de la columna A del PPTO,
+  incluidos ceros, mayúsculas y minúsculas. A1.01 y a1.01 son distintos;
+  1.01 y 1.1 también son distintos.
+
+
+6. CÓMO SE INTERPRETAN LOS INTERVALOS
+-----------------------------------
+Los dos extremos deben existir en el PPTO. El programa incluye TODAS las
+filas comprendidas entre ellos, en el orden en que aparecen en el presupuesto.
+No genera una secuencia numérica ni filtra las filas intermedias por su código.
+
+Por ejemplo, 1.01-1.05 incluye también cualquier subtotal, fila vacía o partida
+de otro prefijo que esté situada entre esos extremos. Los importes de esas
+filas también entran en la suma si contienen valores.
+
+El extremo inicial debe aparecer antes que el final, o en la misma fila.
+Si aparece después, se muestra un error de intervalo invertido.
+
+Debe evitarse la repetición de partidas o el solapamiento de intervalos. El programa no elimina duplicados:
+una partida incluida dos veces se copia y se suma dos veces. Esto también puede
+ocurrir al agrupar varias filas de COMPRAS con el mismo comparativo.
+
+7. CONTENIDO DE LA HOJA PPTO
+---------------------------
+Se leen las columnas A a I desde la fila 5 hasta la última fila utilizada.
+El programa no impone un número máximo fijo de filas; depende del formato del
+libro y de los recursos del equipo. Los presupuestos grandes tardan más.
+
+Columna A: código de partida. Debe ser único.
+Columnas A, B, C y D: se copian a A, B, C y D del comparativo desde la fila 9.
+Columna E: se copia a AF del comparativo desde la fila 9.
+Columna F: importe sumado para el total del presupuesto en COMPRAS, columna S.
+Columna H: se copia a L del comparativo desde la fila 9.
+Columna I: importe sumado para el total objetivo en COMPRAS, columna U.
+
+Las columnas F e I deben contener números, fórmulas con resultado numérico
+o celdas vacías. Las vacías cuentan como cero. No deben introducirse números como texto
+ni textos como "pendiente" en los importes que vayan a sumarse.
+
+Si un código aparece varias veces en la columna A, el programa toma la última
+aparición para localizarlo. Deben utilizarse códigos únicos para evitar resultados erróneos.
+
+El programa copia valores a los comparativos, no las fórmulas del presupuesto.
+Los vínculos externos no se actualizan al abrir el libro: si existen dependencias de otros
+archivos, el presupuesto debe actualizarse y guardarse previamente desde Excel.
+
+8. SELECCIÓN Y CREACIÓN DE COMPARATIVOS
+-------------------------------------
+El rango utiliza la secuencia A, B, ..., Z, AA, AB, ..., ZZ.
+El extremo inicial no puede ir después del final en esa secuencia.
+
+Ejemplos:
+    A-G       Selecciona de A a G, incluidos ambos.
+    A-A       Selecciona solamente A.
+    A-AA      Selecciona de A hasta AA.
+    AA-AG     Selecciona de AA hasta AG.
+
+Se procesan las filas de COMPRAS cuyo identificador esté dentro del rango.
+Un rango sin coincidencias no crea comparativos; el libro se guarda y se
+ordenan igualmente las pestañas.
+
+Los nuevos comparativos se crean copiando Plantilla Comparativos. Su nombre
+se forma con el identificador, un guion bajo y el trabajo de la columna D,
+y se recorta a los primeros 20 caracteres. Ejemplo: A_ALBAÑILERÍA.
+En D2 se escribe el nombre del trabajo al crear la pestaña.
+
+Deben utilizarse nombres de trabajo sencillos, sin caracteres no válidos para una pestaña
+de Excel, como : \ / ? * [ ].
+
+Si ya existe una pestaña cuyo nombre empieza por el identificador y guion
+bajo (por ejemplo A_), se reutiliza. Estos prefijos deben mantenerse en mayúsculas.
+Debe evitarse la existencia de varias pestañas para el mismo identificador
+o de pestañas ajenas con ese prefijo. No se renombra la pestaña existente ni se actualiza su D2.
+
+IMPORTANTE AL REUTILIZAR COMPARATIVOS:
+Se escriben las partidas desde la fila 9, pero no se borran previamente las
+filas antiguas sobrantes. Si antes había más partidas, pueden quedar datos
+antiguos debajo. Se recomienda utilizar el libro base o limpiar previamente las
+zonas de datos que se vayan a reutilizar. Si no hay partidas, no se escriben datos.
+
+La plantilla debe disponer de espacio y formato adecuados para el número de
+partidas: el programa no inserta filas ni adapta automáticamente sus totales
+o su diseño al tamaño de cada comparativo.
+
+9. ORDEN FINAL DE LAS PESTAÑAS
+----------------------------
+Las primeras cuatro pestañas mantienen su posición.
+Desde la quinta se ordenan TODAS las pestañas, no solo los comparativos:
+1) Primero las que contienen un guion bajo (_) en cualquier parte del nombre.
+2) Después las que no contienen guion bajo, como Hoja1.
+3) Dentro de cada grupo, se ordenan por el primer carácter de Z a A,
+   sin distinguir mayúsculas y minúsculas.
+4) Si coinciden en el primer carácter, conservan su orden relativo.
+
+No es una ordenación por el nombre completo: A_TRABAJO y AA_TRABAJO tienen
+la misma prioridad por su primer carácter. Para nombres que empiezan por
+números o signos, se utiliza el orden de caracteres del programa.
+
+10. AVISOS Y SOLUCIÓN DE PROBLEMAS
+--------------------------------
+"No hay ningún Excel": debe colocarse un archivo admitido directamente en entrada.
+
+"Hay varios Excel": debe dejarse únicamente el archivo que se va a procesar
+y ejecutar de nuevo el programa.
+El programa muestra los nombres de los archivos encontrados.
+
+"No se encuentra ninguna pestaña que empiece por PPTO": debe revisarse el nombre de la hoja.
+
+Error al localizar COMPRAS o Plantilla Comparativos: deben comprobarse los nombres
+exactos y la presencia de las hojas necesarias en el libro.
+
+"Formato de partidas incorrecto": deben revisarse la celda E, los separadores
+y las reglas de códigos. No deben incluirse comentarios en la lista de partidas.
+
+"Falta una partida": falta uno de los extremos de un intervalo.
+
+"El inicio debe terminar en letra": una abreviatura como -c requiere un
+inicio terminado en letra, por ejemplo A1.01a-c.
+
+"No se encuentra la partida": debe compararse el código con la columna A del PPTO,
+incluidos ceros y mayúsculas, y comprobarse su presencia desde la fila 5.
+
+"El intervalo está invertido": debe revisarse la posición de los extremos en PPTO.
+
+Error al sumar importes: debe revisarse si F o I del PPTO contienen texto o errores
+de fórmula en las filas seleccionadas.
+
+Error al escribir, guardar o mover hojas: deben cerrarse los archivos abiertos
+y comprobarse los permisos, la protección del libro y de las hojas, y el espacio
+disponible.
+
+Si aparece un error técnico, debe conservarse el texto mostrado antes de pulsar Enter
+para cerrar. Tras corregir el archivo de entrada, debe ejecutarse de nuevo
+el programa.
+
+11. COMPROBACIÓN DEL RESULTADO
+-----------------------------
+Antes de utilizar el resultado, debe comprobarse lo siguiente que la ejecución ha mostrado
+"Archivo generado".
+
+
+

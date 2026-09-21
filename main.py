@@ -9,6 +9,7 @@ from funciones_excel import (
 )
 
 def main():
+    print("Automatizar Excel Ingeco - Version 1.2")
     carpeta_proyecto = obtener_carpeta_aplicacion()
     (carpeta_proyecto / "entrada").mkdir(exist_ok=True)
     (carpeta_proyecto / "salida").mkdir(exist_ok=True)

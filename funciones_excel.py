@@ -291,6 +291,36 @@ def escribir_partidas(wb, letra, partidas):
 
     raise ValueError(f"No se encuentra la pestaña del comparativo{letra}")
 
+def aplicar_formato_comparativo(celda):
+    """Formato fijo del presupuesto de referencia, independiente del libro de entrada."""
+    api = celda.api
+    api.ClearFormats()  # Restablece también el formato numérico general en cualquier idioma.
+    api.HorizontalAlignment = -4108  # Centrado.
+    api.VerticalAlignment = -4107  # Inferior.
+    api.WrapText = False
+    api.Orientation = 0
+    api.AddIndent = False
+    api.IndentLevel = 0
+    api.ShrinkToFit = False
+    api.ReadingOrder = -5002
+    api.Locked = True
+    api.FormulaHidden = False
+    fuente = api.Font
+    fuente.Name = "Calibri"
+    fuente.Size = 11
+    fuente.Bold = False
+    fuente.Italic = False
+    fuente.Underline = -4142
+    fuente.Strikethrough = False
+    fuente.Subscript = False
+    fuente.Superscript = False
+    fuente.Color = 0
+    api.Borders.LineStyle = -4142  # Sin bordes.
+    api.Interior.Pattern = 1  # Relleno sólido, RGB (228, 223, 236).
+    api.Interior.Color = 15523812
+    api.Interior.PatternColor = 0
+
+
 def actualizar_comparativos_en_presupuesto(wb, hoja_presupuesto):
     """Anota en K los prefijos de las hojas que contienen cada código de PPTO."""
     letras_por_codigo = {}
@@ -316,14 +346,16 @@ def actualizar_comparativos_en_presupuesto(wb, hoja_presupuesto):
 
     codigos = hoja_presupuesto.range(f"A5:A{ultima_fila}").options(ndim=1).value
     for fila, codigo in enumerate(codigos, start=5):
+        celda = hoja_presupuesto.range(f"K{fila}")
         if codigo is None or not str(codigo).strip():
+            if celda.value is None or not str(celda.value).strip():
+                celda.color = None
             continue
         letras = letras_por_codigo.get(str(codigo).strip(), set())
-        celda = hoja_presupuesto.range(f"K{fila}")
         if letras:
-            # Copiamos solo el formato del ejemplo, conservando las letras calculadas.
-            hoja_presupuesto.range("J117").copy()
-            celda.paste(paste="formats")
+            aplicar_formato_comparativo(celda)
+        else:
+            celda.color = None
         # Recalculamos para quitar referencias a comparativos ya eliminados.
         celda.value = (
             ", ".join(sorted(letras, key=letra_a_numero)) or None
